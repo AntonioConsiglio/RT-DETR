@@ -74,6 +74,7 @@ class BaseConfig(object):
         self.print_freq :int = None 
         self.checkpoint_freq :int = 1
         self.writer_type:str = WriterType.TENSORBOARD
+        self.project_name:str = None
         self.output_dir :str = None
         self.summary_dir :str = None
         self.device : str = ''
@@ -290,12 +291,12 @@ class BaseConfig(object):
             elif self.writer_type == WriterType.WANDB:
                 if not wandb.run:
                     wandb_config = self.yaml_cfg
-                    project_name = getattr(self, 'project_name', 'default-project')
+                    project_name = self.project_name if self.project_name is not None else 'default-project'
                     self._writer = wandb.init(
                         project=project_name,
                         dir=self.output_dir if self.output_dir else self.summary_dir,
                         config=wandb_config,
-                        resume=True,
+                        resume=False,
                         settings=wandb.Settings(start_method="fork")
                     )
                 else:
