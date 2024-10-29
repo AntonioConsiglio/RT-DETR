@@ -9,12 +9,18 @@ from torch.optim.lr_scheduler import LRScheduler
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.utils.tensorboard import SummaryWriter
 
+import wandb
+from typing import Union
+
 from pathlib import Path 
 from typing import Callable, List, Dict
 
 
 __all__ = ['BaseConfig', ]
 
+class WriterType:
+    TENSORBOARD = "tensorboard"
+    WANDB = "wandb"
 
 class BaseConfig(object):
     # TODO property
@@ -67,6 +73,7 @@ class BaseConfig(object):
         self.seed :int = None
         self.print_freq :int = None 
         self.checkpoint_freq :int = 1
+        self.writer_type:str = WriterType.TENSORBOARD
         self.output_dir :str = None
         self.summary_dir :str = None
         self.device : str = ''
@@ -268,18 +275,46 @@ class BaseConfig(object):
         self._evaluator = fn
 
     @property
-    def writer(self) -> SummaryWriter:
-        if self._writer is None: 
-            if self.summary_dir:
-                self._writer = SummaryWriter(self.summary_dir)
-            elif self.output_dir:
-                self._writer = SummaryWriter(Path(self.output_dir) / 'summary')
+    def writer(self) -> Union[SummaryWriter, 'wandb.sdk.wandb_run.Run']:
+        """
+            Property that returns either a TensorBoard SummaryWriter or W&B run instance.
+            Initializes the writer if it doesn't exist based on the specified writer_type.
+        """
+        if self._writer is None:
+            if self.writer_type == WriterType.TENSORBOARD:
+                if self.summary_dir:
+                    self._writer = SummaryWriter(self.summary_dir)
+                elif self.output_dir:
+                    self._writer = SummaryWriter(Path(self.output_dir) / 'summary')
+            
+            elif self.writer_type == WriterType.WANDB:
+                if not wandb.run:
+                    wandb_config = self.yaml_cfg
+                    project_name = getattr(self, 'project_name', 'default-project')
+                    self._writer = wandb.init(
+                        project=project_name,
+                        dir=self.output_dir if self.output_dir else self.summary_dir,
+                        config=wandb_config,
+                        resume=True
+                    )
+                else:
+                    self._writer = wandb.run
         return self._writer
-    
+
     @writer.setter
-    def writer(self, m):
-        assert isinstance(m, SummaryWriter), f'{type(m)} must be SummaryWriter'
+    def writer(self, m: Union[SummaryWriter, 'wandb.sdk.wandb_run.Run']):
+        """
+        Setter for the writer property. Accepts either a TensorBoard SummaryWriter
+        or a W&B run instance.
+        """
+        print("Is called writer setter")
+        if not isinstance(m, (SummaryWriter, wandb.run.__class__)):
+            raise TypeError(f'Writer must be SummaryWriter or wandb.run, got {type(m)}')
+        
         self._writer = m
+        # Set writer_type based on the type of writer being set
+        self.writer_type = (WriterType.TENSORBOARD if isinstance(m, SummaryWriter) 
+                        else WriterType.WANDB)
 
     def __repr__(self, ):
         s = ''

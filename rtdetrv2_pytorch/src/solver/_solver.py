@@ -55,7 +55,7 @@ class BaseSolver(object):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.writer = cfg.writer
 
-        if self.writer:
+        if self.writer and cfg.writer_type == "tensorboard":
             atexit.register(self.writer.close)
             if dist_utils.is_main_process():
                 self.writer.add_text(f'config', '{:s}'.format(cfg.__repr__()), 0)

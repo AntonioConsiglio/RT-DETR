@@ -17,6 +17,7 @@ from torch.cuda.amp.grad_scaler import GradScaler
 from ..optim import ModelEMA, Warmup
 from ..data import CocoEvaluator
 from ..misc import MetricLogger, SmoothedValue, dist_utils
+import wandb
 
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
@@ -91,11 +92,21 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
         if writer and dist_utils.is_main_process():
-            writer.add_scalar('Loss/total', loss_value.item(), global_step)
-            for j, pg in enumerate(optimizer.param_groups):
-                writer.add_scalar(f'Lr/pg_{j}', pg['lr'], global_step)
-            for k, v in loss_dict_reduced.items():
-                writer.add_scalar(f'Loss/{k}', v.item(), global_step)
+            if isinstance(writer,SummaryWriter):
+                writer.add_scalar('Loss/total', loss_value.item(), global_step)
+                for j, pg in enumerate(optimizer.param_groups):
+                    writer.add_scalar(f'Lr/pg_{j}', pg['lr'], global_step)
+                for k, v in loss_dict_reduced.items():
+                    writer.add_scalar(f'Loss/{k}', v.item(), global_step)
+            else:
+                # Weights & Biases logging
+                metrics = {
+                    'Loss/total': loss_value.item(),
+                    **{f'Lr/pg_{j}': pg['lr'] for j, pg in enumerate(optimizer.param_groups)},
+                    **{f'Loss/{k}': v.item() for k, v in loss_dict_reduced.items()}
+                }
+                wandb.log(metrics, step=global_step)
+
                 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()

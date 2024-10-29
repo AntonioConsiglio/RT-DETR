@@ -8,6 +8,8 @@ import datetime
 import torch 
 
 from ..misc import dist_utils, profiler_utils
+from torch.utils.tensorboard import SummaryWriter
+import wandb
 
 from ._solver import BaseSolver
 from .det_engine import train_one_epoch, evaluate
@@ -76,8 +78,19 @@ class DetSolver(BaseSolver):
             # TODO 
             for k in test_stats:
                 if self.writer and dist_utils.is_main_process():
-                    for i, v in enumerate(test_stats[k]):
-                        self.writer.add_scalar(f'Test/{k}_{i}'.format(k), v, epoch)
+                    if isinstance(self.writer, SummaryWriter):
+                        # TensorBoard logging
+                        for k in test_stats:
+                            for i, v in enumerate(test_stats[k]):
+                                self.writer.add_scalar(f'Test/{k}_{i}', v, epoch)
+                    else:
+                        # Weights & Biases logging
+                        metrics = {
+                            f'Test/{k}_{i}': v 
+                            for k in test_stats 
+                            for i, v in enumerate(test_stats[k])
+                        }
+                        wandb.log(metrics, step=epoch)
             
                 if k in best_stat:
                     best_stat['epoch'] = epoch if test_stats[k][0] > best_stat[k] else best_stat['epoch']
