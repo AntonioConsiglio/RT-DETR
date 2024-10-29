@@ -295,7 +295,8 @@ class BaseConfig(object):
                         project=project_name,
                         dir=self.output_dir if self.output_dir else self.summary_dir,
                         config=wandb_config,
-                        resume=True
+                        resume=True,
+                        settings=wandb.Settings(start_method="fork")
                     )
                 else:
                     self._writer = wandb.run
