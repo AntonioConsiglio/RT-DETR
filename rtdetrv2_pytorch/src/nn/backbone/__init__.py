@@ -16,3 +16,5 @@ from .csp_resnet import CSPResNet
 from .csp_darknet import CSPDarkNet, CSPPAN
 
 from .hgnetv2 import HGNetv2
+# Custom backbone
+from .stdc import STDC2
