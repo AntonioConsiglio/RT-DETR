@@ -8,6 +8,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.cuda.amp.grad_scaler import GradScaler
 from torch.utils.tensorboard import SummaryWriter
+import torch.distributed as dist
 
 import wandb
 from typing import Union
@@ -297,7 +298,6 @@ class BaseConfig(object):
                         dir=self.output_dir if self.output_dir else self.summary_dir,
                         config=wandb_config,
                         resume=False,
-                        settings=wandb.Settings(start_method="fork")
                     )
                 else:
                     self._writer = wandb.run
