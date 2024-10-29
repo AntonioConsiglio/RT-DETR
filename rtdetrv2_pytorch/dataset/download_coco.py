@@ -18,7 +18,7 @@ DATASET_INFO = {
 }
 
 # Download directory
-DOWNLOAD_DIR = Path('coco_dataset')
+DOWNLOAD_DIR = Path(__file__).parent.resolve()
 
 # Helper function to compute MD5 checksum
 def calculate_md5(file_path):
